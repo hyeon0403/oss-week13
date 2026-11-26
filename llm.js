@@ -2,9 +2,9 @@
 // The provider, the model and the key come from .env:
 //   process.env.LLM_BASE_URL, process.env.LLM_MODEL, process.env.LLM_API_KEY
 
-const SYSTEM = `항상 반말로 답해.
-줄바꿈 없이 한 문단으로, 세 문장 이내로 답해.
-목록, 제목, 굵은 글씨 등 마크다운 문법을 사용하지 마.`;
+const SYSTEM = `항상 존댓말(해요체)로 답해주세요.
+줄바꿈 없이 한 문단으로, 세 문장 이내로 답해주세요.
+목록, 제목, 굵은 글씨 등 마크다운 문법을 사용하지 말고 일반 텍스트로 답해주세요.`;
 
 // ask("a question")  ->  the model's answer, as a string
 export async function ask(question) {
@@ -37,8 +37,30 @@ export async function ask(question) {
 // chat([{ role: "user", content: "..." }, { role: "assistant", content: "..." }, ...])
 //   ->  the model's next answer, as a string
 export async function chat(history) {
-  // TODO P5: write this function (see problems/P5_chat.md). Delete the throw line below.
-  throw new Error("chat() is not written yet");
+  const res = await fetch(
+    `${process.env.LLM_BASE_URL}/chat/completions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.LLM_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: process.env.LLM_MODEL,
+        messages: [
+          { role: "system", content: SYSTEM },
+          ...history,
+        ],
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(`LLM: HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.choices[0].message.content.trim();
 }
 
 // analyze("a review")  ->  an object, not a sentence:
